@@ -6,4 +6,3 @@ class Politica(db.Model):
     titulo = db.Column(db.String(80), nullable=False)
     descricao = db.Column(db.String(200), nullable=False)
     data_criacao = db.Column(db.DateTime, nullable=False)
-    
