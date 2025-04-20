@@ -17,8 +17,8 @@ def home():
     politicas = Politica.query.all()
     return render_template('index.html', politicas=politicas)
 
-@app.route('/nova_politica', methods=['GET', 'POST']) # CRIA POLITICA
-def nova_politica():
+@app.route('/criar_politica', methods=['GET', 'POST']) # CRIA POLITICA
+def criar_politica():
     if request.method == 'POST':
 
         titulo = request.form['titulo']
@@ -27,7 +27,7 @@ def nova_politica():
         nova_politica = Politica(titulo=titulo, descricao=descricao)
         db.session.add(nova_politica)
         db.session.commit()
-        return redirect(url_for('index'))
+        return redirect(url_for('home'))
     return render_template('criar_politica.html')
 
 @app.route('/visualizar_politica/<int:id>') # VISUALIZA POLITICA
@@ -50,6 +50,7 @@ def deletar_politica(id):
     politica = Politica.query.get_or_404(id)
     db.session.delete(politica)
     db.session.commit()
+    return redirect(url_for('home'))
 
 @app.route('/analisar_politica/<int:id>')
 def analisar_politica(id):

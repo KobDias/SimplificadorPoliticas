@@ -7,33 +7,34 @@
 <p>Esta é uma aplicação simples para analisar políticas de segurança.</p>
 
 {% if politicas %} <!-- se não existirem politicas criadas-->
-<p>Existem {{ politicas | count }} politicas criadas</p>
+    <p>Existem {{ politicas | count }} politicas criadas</p>
 
-    <table class="table table-striped table-bordered">
-        <thead>
-            <tr>
-                <th>Politica</th>
-                <th>Descricao</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for politica in politicas %}
-            <tr>
-                <td>
-                    {{ politica.titulo }}
-                </td>
-                <td>
-                    {{ politica.descricao }}
-                </td>
-                <td>
-                    <a href="{{ url_for('home', id=politica.id) }}">Ver</a>
-                    <a href="{{ url_for('home', id=politica.id) }}">Eliminar</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr scope="col">
+                    <th>Politica</th>
+                    <th>Descricao</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for politica in politicas %}
+                <tr scope="row">
+                    <td>
+                        {{ politica.titulo }}
+                    </td>
+                    <td>
+                        {{ politica.descricao }}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('home', id=politica.id) }}" class="btn btn-success">Ver</a>
+                        <a href="{{ url_for('deletar_politica', id=politica.id) }}" class="btn btn-danger">Eliminar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <a href="{{ url_for('criar_politica') }}" class="btn btn-primary">Criar nova politica</a>
 
 {% else %} <!-- se existirem politicas criadas-->
 <p>Para começar, cria uma politica</p>
