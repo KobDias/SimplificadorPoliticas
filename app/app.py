@@ -56,9 +56,13 @@ def deletar_politica(id):
 def analisar_politica(id):
     politica = Politica.query.get_or_404(id)
     
+    # Simulação de resultados da análise
+    resultados = [
+        {'titulo': 'Resultado 1', 'descricao': 'Descrição do resultado 1'},
+        {'titulo': 'Resultado 2', 'descricao': 'Descrição do resultado 2'}
+    ]
+    return render_template('visualizar_politica.html', politica=politica, resultados=resultados)
 
-
-    return render_template('analisar_politica.html', politica=politica)
 
 if __name__ == '__main__':
     with app.app_context():

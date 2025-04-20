@@ -27,7 +27,7 @@
                         {{ politica.descricao }}
                     </td>
                     <td>
-                        <a href="{{ url_for('home', id=politica.id) }}" class="btn btn-success">Ver</a>
+                        <a href="{{ url_for('visualizar_politica', id=politica.id) }}" class="btn btn-success">Ver</a>
                         <a href="{{ url_for('deletar_politica', id=politica.id) }}" class="btn btn-danger">Eliminar</a>
                     </td>
                 </tr>
