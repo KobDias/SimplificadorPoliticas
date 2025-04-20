@@ -1,0 +1,28 @@
+{% extends "header.html" %}
+
+
+{% block content %}
+
+<h1>Bem-vindo ao Analisador de Políticas</h1>
+<p>Esta é uma aplicação simples para analisar políticas de segurança.</p>
+<p>Use o menu para navegar pelas diferentes seções.</p>
+
+
+{% if politicas %} <!-- se não existirem politicas criadas-->
+<p>Existem {{ politicas | count }} politicas criadas</p>
+<ul class="list-group">
+    {% for politica in politicas %}
+        <li class="list-group-item">
+            <a href="{{ url_for('nova_politica', id=politicas.id) }}">{{ politica.titulo }}</a>
+        </li>
+    {% endfor %}
+
+</ul>
+{% else %} <!-- se existirem politicas criadas-->
+<p>Para começar, cria uma politica</p>
+<a href="/">Criar politica</a>
+{% endif %}
+
+
+
+{% endblock %}
