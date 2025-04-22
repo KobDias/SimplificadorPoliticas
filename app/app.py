@@ -1,9 +1,20 @@
-from flask import Flask, request, url_for, redirect, render_template
+from flask import Flask, jsonify, request, url_for, redirect, render_template
 from flask_sqlalchemy import SQLAlchemy
+import requests
 from db import db
 from models import Politica
+import os
+import json
+
+api_mistra = os.getenv("MISTRAL_API_KEY")
+
 
 import datetime as datatime
+
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 #configuração do app
 app = Flask(__name__)
@@ -54,16 +65,44 @@ def deletar_politica(id):
 
 @app.route('/analisar_politica/<int:id>')
 def analisar_politica(id):
-    politica = Politica.query.get_or_404(id)
+    texto = Politica.query.get_or_404(id)
+
+    promptResumidor = f"""You are a legal expert, mainly focused on LGPD. You'll receive the description of a policy. 
+    Your task is to analyze and provide summaries of its main points, trying to better it each time, returning to the user a text with the terms simplified though accurate so they can comprehend how their data is being used. Consider you're speaking to brazilians and lay people that don't undertand the minimun about law, much less LGDP
+    Your summary must follow the following structure:
+    1. **Summary**: A summary that contains the main points in a clear way. It should be smaller than the actual policy.
+    2. **Objective**: The main reason behind the politic.
+    3. **Colected data**: Which data is being collected and its prupose behind, also how it is being used.
+    5. **Data sharing**: Whenever or not the data is being shared to a third-part and if so, which data, how and why.
+    6. **Security**: Safety measurements to ensure the user's data is safe.
+    7. **Language**: Always be in portuguese and make sure to be clear.
     
-    # Simulação de resultados da análise
-    resultados = [
-        {'titulo': 'Resultado 1', 'descricao': 'Descrição do resultado 1'},
-        {'titulo': 'Resultado 2', 'descricao': 'Descrição do resultado 2'}
-    ]
-    return render_template('visualizar_politica.html', politica=politica, resultados=resultados)
+    # Policy description:
+    # {texto.descricao}"""
 
-
+    responseRaw = requests.post(
+        'https://api.mistral.ai/v1/chat/completions',
+        json={
+            "model": "mistral-large-latest",
+            "temperature": 0.7,
+            "messages": [
+                {"role": "system", "content": promptResumidor},
+                {"role": "user", "content": texto.descricao}
+            ],
+            "n":3,
+            # prompt: "You are a legal expert, mainly focused on LGPD. You'll receive the description of a policy. Your task is to analyze and provide a summary of its main points, returning to the user a text with the terms simplified tho acurate so they can comprehend how their data is being used."
+        },
+        headers={
+            'Authorization': f'Bearer {api_mistra}'
+            }
+    )
+    if responseRaw.status_code == 200:
+        resultado = responseRaw.json()
+        respostas = [choice['message']['content'] for choice in resultado.get('choices', [])]
+        return jsonify(respostas)
+    else:
+        return jsonify({"error": "Erro ao classificar a resposta"}), 500
+    
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
