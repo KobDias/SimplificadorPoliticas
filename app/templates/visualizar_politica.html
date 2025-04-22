@@ -19,17 +19,15 @@
             <a href="{{ url_for('analisar_politica', id=politica.id)}}" class="btn btn-success btn-block" >Analisar</a>
         </div>
             <div class="column">
-                {% if resultados %}
+                {% if resultados and resultados.id == politicas.id %}
                     <h3>Resultados da Análise</h3>
                     <div class="warning">
-                        {% for resultado in resultados %}
-                            <p class="text">
-                                <strong>{{ resultado['titulo'] }}</strong>: {{ resultado['descricao'] }}
-                            </p>
-                        {% endfor %}
+                        <p class="text">
+                            <strong>Resultados:</strong>
+                            {{ resultados.resultados }}
+                        </p>
                     </div>
                 {% endif %}
-            </div>
             <hr class="hr"/>
         <div class="row mt-3 w-100 justify-content-between">
             <a href="{{ url_for('home') }}" class="btn btn-primary col-3">Voltar</a>

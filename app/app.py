@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, url_for, redirect, render_template
+from flask import Flask, jsonify, request, session, url_for, redirect, render_template
 from flask_sqlalchemy import SQLAlchemy
 import requests
 from db import db
@@ -44,7 +44,13 @@ def criar_politica():
 @app.route('/visualizar_politica/<int:id>') # VISUALIZA POLITICA
 def visualizar_politica(id):
     politica = Politica.query.get_or_404(id)
-    return render_template('visualizar_politica.html', politica=politica)
+    resultados = None
+    if 'resultados' in session and session['id'] == id:
+        resultados = session['resultados']
+        # Limpe os dados da sessão após recuperá-los
+        session.pop('resultados', None)
+        session.pop('id', None)
+    return render_template('visualizar_politica.html', politica=politica, resultados=resultados)
 
 @app.route('/editar_politica/<int:id>', methods=['GET', 'POST']) # EDITA POLITICA
 def editar_politica(id):
@@ -53,7 +59,7 @@ def editar_politica(id):
         politica.titulo = request.form['titulo']
         politica.descricao = request.form['descricao']
         db.session.commit()
-        return redirect(url_for('index'))
+        return redirect(url_for('home'))
     return render_template('editar_politica.html', politica=politica)
 
 @app.route('/deletar_politica/<int:id>') # DELETA POLITICA
@@ -69,14 +75,20 @@ def analisar_politica(id):
 
     promptResumidor = f"""You are a legal expert, mainly focused on LGPD. You'll receive the description of a policy. 
     Your task is to analyze and provide summaries of its main points, trying to better it each time, returning to the user a text with the terms simplified though accurate so they can comprehend how their data is being used. Consider you're speaking to brazilians and lay people that don't undertand the minimun about law, much less LGDP
-    Your summary must follow the following structure:
-    1. **Summary**: A summary that contains the main points in a clear way. It should be smaller than the actual policy.
-    2. **Objective**: The main reason behind the politic.
-    3. **Colected data**: Which data is being collected and its prupose behind, also how it is being used.
-    5. **Data sharing**: Whenever or not the data is being shared to a third-part and if so, which data, how and why.
-    6. **Security**: Safety measurements to ensure the user's data is safe.
-    7. **Language**: Always be in portuguese and make sure to be clear.
-    
+    Your summary must be in portuguese, be clear and follow the structure:
+    1. Summary: A summary that contains the main points in a clear way. It should be smaller than the actual policy.
+    2. Objective: The main reason behind the politic.
+    3. Colected data: Which data is being collected and its prupose behind, also how it is being used.
+    5. Data sharing: Whenever or not the data is being shared to a third-part and if so, which data, how and why.
+    6. Security: Safety measurements to ensure the user's data is safe.
+
+    Once you finish all three summaries, you should choose between the three and return the one that is the most clear and easy to understand.
+    You should return the analysis in a json format, with the following keys:
+    - Best summary = [string containing the best summary out of the three]
+    - Summary 1 = [string containing the first summary]
+    - Summary 2 = [string containing the second summary]
+    - Summary 3 = [string containing the third summary]
+
     # Policy description:
     # {texto.descricao}"""
 
@@ -89,20 +101,17 @@ def analisar_politica(id):
                 {"role": "system", "content": promptResumidor},
                 {"role": "user", "content": texto.descricao}
             ],
-            "n":3,
-            # prompt: "You are a legal expert, mainly focused on LGPD. You'll receive the description of a policy. Your task is to analyze and provide a summary of its main points, returning to the user a text with the terms simplified tho acurate so they can comprehend how their data is being used."
         },
         headers={
             'Authorization': f'Bearer {api_mistra}'
             }
     )
     if responseRaw.status_code == 200:
-        resultado = responseRaw.json()
-        respostas = [choice['message']['content'] for choice in resultado.get('choices', [])]
-        return jsonify(respostas)
+        resultados = responseRaw.json()
+        return resultados['choices'][0]['message']['content']    
     else:
-        return jsonify({"error": "Erro ao classificar a resposta"}), 500
-    
+        return "Nenhuma escolha encontrada na resposta."
+            
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
