@@ -44,14 +44,20 @@ def criar_politica():
 @app.route('/visualizar_politica/<int:id>') # VISUALIZA POLITICA
 def visualizar_politica(id):
     resultados = None
+    resumo = None
+    objetivo = None
     if 'resultados' in session and session['id'] == id:
         resultados = session['resultados']
+        resumo = session.get('resumo')
+        objetivo = session.get('objetivo')
         id = session['id']
         # Limpe os dados da sessão após recuperá-los
         session.pop('resultados', None)
+        session.pop('resumo', None)
+        session.pop('objetivo', None)
         session.pop('id', None)
     politica = Politica.query.get_or_404(id)
-    return render_template('visualizar_politica.html', politica=politica, resultados=resultados)
+    return render_template('visualizar_politica.html', politica=politica, resultados=resultados, resumo=resumo, objetivo=objetivo)  
 
 @app.route('/editar_politica/<int:id>', methods=['GET', 'POST']) # EDITA POLITICA
 def editar_politica(id):
@@ -75,7 +81,11 @@ def analisar_politica(id):
     texto = Politica.query.get_or_404(id)
 
     promptResumidor = f"""You are a legal expert, mainly focused on LGPD. You'll receive the description of a policy. 
-    Your task is to analyze and provide summaries of its main points, trying to better it each time, returning to the user a text with the terms simplified though accurate so they can comprehend how their data is being used. Consider you're speaking to brazilians and lay people that don't undertand the minimun about law, much less LGDP. Upom specific words, you should provide their meaning between brackets, so the user can understand what it means. Remember to not repeat yourself.
+    Your task is to analyze and provide summaries of its main points, trying to better it each time, returning to 
+    the user a text with the terms simplified though accurate so they can comprehend how their data is being used. 
+    Consider you're speaking to brazilians and lay people that don't undertand the minimun about law, much less LGDP.
+    Upom specific words, you should provide their meaning between brackets, so the user can understand what it means.
+    Remember to not repeat yourself.
     Your summary must be in portuguese, be clear and follow the structure:
     1. Summary: A summary that contains the main points in a clear way. It should be smaller than the actual policy.
     2. Objective: The main reason behind the politic.
@@ -83,7 +93,9 @@ def analisar_politica(id):
 
     Once you finish all three summaries, you should choose between the three and return the one that is the most clear and easy to understand.
     You should return the analysis in a json format, with the following keys:
-    - 'Best summary' : '[string containing the best summary out of the three]'
+    - 'Best summary' : 
+        - '1. Summary': 'the summary you choose as the best one'
+        - '2. Objective': 'the objective you choose as the best one'
 
     # Policy description:
     # {texto.descricao}"""
@@ -104,19 +116,38 @@ def analisar_politica(id):
     )
     if responseRaw.status_code == 200:
         resultados = responseRaw.json()
-        content = resultados['choices'][0]['message']['content']
+        contenta = resultados['choices'][0]['message']['content']
+        content = contenta.strip('```json\n').strip('```')
+        if content and content.startswith('{') and content.endswith('}'):
+            # Decodifique o JSON
+            content_dict = json.loads(content)
+            print("\nDicionário decodificado:")
+            print(content_dict)
+        else:
+            print("Erro: O conteúdo não é um JSON válido.")
+            return "Erro: O conteúdo não é um JSON válido."
 
-        # Removendo os marcadores de código (```json e ```)
-        content = content.strip('```json\n').strip('```')
-
-        # Convertendo o JSON em um dicionário Python
-        content_dict = json.loads(content)
-        print(content_dict)
-        best_summary = content_dict['Best summary']
-
-        # Armazenando o resultado na sessão
-        session['resultados'] = best_summary
-        session['id'] = id
+        best_summary = content_dict.get('Best summary')
+        print("\nTipo de 'Best summary':")
+        print(type(best_summary))
+        if best_summary is None:
+            print("Erro: A chave 'Best summary' não foi encontrada.")
+        else:
+            print(best_summary)
+            # Acesse os valores dentro de 'Best summary'
+            resumo = best_summary.get('1. Summary', '1. Resumo')
+            objetivo = best_summary.get('2. Objective', '2. Objetivo')
+            # Exiba os valores
+            print("\nResumo:")
+            print(resumo)
+            print("\nObjetivo:")
+            print(objetivo)
+            
+                # Armazenando o resultado na sessão
+            session['resultados'] = True
+            session['resumo'] = resumo
+            session['objetivo'] = objetivo
+            session['id'] = texto.id
         
 
         return redirect(url_for('visualizar_politica', id=id))

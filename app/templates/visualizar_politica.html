@@ -17,13 +17,15 @@
         <div class="row w-100 mb-4">
             <a href="{{ url_for('analisar_politica', id=politica.id)}}" class="btn btn-success btn-block" >Analisar</a>
         </div>
-            <div class="column">
+            <div class="column text-center w-100 mb-4">
                 {% if resultados %}
-                    <h3>Resultados da Análise</h3>
-                    <div class="warning">
-                        <p class="text">
-                            <strong>Resultados:</strong>
-                            {{ resultados }}
+                    <h5>Resultados da Análise</h5>
+                    <div class="warning text-justify">
+                        <p>
+                            {{ resumo }}
+                        </p>
+                        <p>
+                            {{ objetivo}}
                         </p>
                     </div>
                 {% endif %}
