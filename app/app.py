@@ -8,9 +8,6 @@ import json
 
 api_mistra = os.getenv("MISTRAL_API_KEY")
 
-
-import datetime as datatime
-
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -71,7 +68,7 @@ def analisar_politica(id):
     Your task is to analyze and provide summaries of its main points, continuously improving the clarity, returning to 
     the user a text with the terms simplified though accurate so they can comprehend how their data is being used. 
     Consider you're speaking to brazilians and lay people that don't undertand the minimun about law, much less LGDP.
-    When encountering technical terms, you should provide their meaning between brackets, so the user can understand what it means.
+    When encountering technical terms, you should provide their meaning between parentheses, so the user can understand what it means.
     Remember to not repeat yourself.
     Your summary must be in portuguese, clear, informal but precise and follow the structure:
     1. Summary: A summary that contains the main points in a clear way. Prioritize small sentences and easy words. Make analogies when possible.
@@ -108,34 +105,23 @@ def analisar_politica(id):
         if content and content.startswith('{') and content.endswith('}'):
             # Decodifique o JSON
             content_dict = json.loads(content)
-            print("\nDicionário decodificado:")
-            print(content_dict)
         else:
-            print("Erro: O conteúdo não é um JSON válido.")
+            print(content_dict)
             return "Erro: O conteúdo não é um JSON válido."
 
         best_summary = content_dict.get('Best summary')
-        print("\nTipo de 'Best summary':")
-        print(type(best_summary))
         if best_summary is None:
-            print("Erro: A chave 'Best summary' não foi encontrada.")
+            return "Erro: A chave 'Best summary' não foi encontrada."
         else:
-            print(best_summary)
             # Acesse os valores dentro de 'Best summary'
             resumo = best_summary.get('1. Summary', '1. Resumo')
             objetivo = best_summary.get('2. Objective', '2. Objetivo')
-            # Exiba os valores
-            print("\nResumo:")
-            print(resumo)
-            print("\nObjetivo:")
-            print(objetivo)
             
             # Armazenando o resultado na sessão
             session['resumo'] = resumo
             session['objetivo'] = objetivo
             session['id'] = texto.id
-        
-
+    
         return redirect(url_for('visualizar_politica', id=id))
     else:
         return "Nenhuma escolha encontrada na resposta."
