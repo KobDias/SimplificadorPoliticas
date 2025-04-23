@@ -4,7 +4,6 @@
 
     <div class="container-fluid w-90">
         <div class="column w-100">
-            {% if politica %}
         <div class="row w-100 justify-content-center">
             <h2>
                 {{ politica.titulo }}
@@ -19,12 +18,12 @@
             <a href="{{ url_for('analisar_politica', id=politica.id)}}" class="btn btn-success btn-block" >Analisar</a>
         </div>
             <div class="column">
-                {% if resultados and resultados.id == politicas.id %}
+                {% if resultados %}
                     <h3>Resultados da Análise</h3>
                     <div class="warning">
                         <p class="text">
                             <strong>Resultados:</strong>
-                            {{ resultados.resultados }}
+                            {{ resultados }}
                         </p>
                     </div>
                 {% endif %}
@@ -34,7 +33,6 @@
             <a href="{{ url_for('editar_politica', id=politica.id) }}" class="btn btn-warning col-3 text-white">Editar</a>
             <a href="{{ url_for('deletar_politica', id=politica.id) }}" class="btn btn-danger col-3">Eliminar</a>
         </div>
-    {% endif %}
         </div>
     </div>
 

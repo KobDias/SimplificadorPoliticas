@@ -43,13 +43,14 @@ def criar_politica():
 
 @app.route('/visualizar_politica/<int:id>') # VISUALIZA POLITICA
 def visualizar_politica(id):
-    politica = Politica.query.get_or_404(id)
     resultados = None
     if 'resultados' in session and session['id'] == id:
         resultados = session['resultados']
+        id = session['id']
         # Limpe os dados da sessão após recuperá-los
         session.pop('resultados', None)
         session.pop('id', None)
+    politica = Politica.query.get_or_404(id)
     return render_template('visualizar_politica.html', politica=politica, resultados=resultados)
 
 @app.route('/editar_politica/<int:id>', methods=['GET', 'POST']) # EDITA POLITICA
@@ -74,20 +75,15 @@ def analisar_politica(id):
     texto = Politica.query.get_or_404(id)
 
     promptResumidor = f"""You are a legal expert, mainly focused on LGPD. You'll receive the description of a policy. 
-    Your task is to analyze and provide summaries of its main points, trying to better it each time, returning to the user a text with the terms simplified though accurate so they can comprehend how their data is being used. Consider you're speaking to brazilians and lay people that don't undertand the minimun about law, much less LGDP
+    Your task is to analyze and provide summaries of its main points, trying to better it each time, returning to the user a text with the terms simplified though accurate so they can comprehend how their data is being used. Consider you're speaking to brazilians and lay people that don't undertand the minimun about law, much less LGDP. Upom specific words, you should provide their meaning between brackets, so the user can understand what it means. Remember to not repeat yourself.
     Your summary must be in portuguese, be clear and follow the structure:
     1. Summary: A summary that contains the main points in a clear way. It should be smaller than the actual policy.
     2. Objective: The main reason behind the politic.
-    3. Colected data: Which data is being collected and its prupose behind, also how it is being used.
-    5. Data sharing: Whenever or not the data is being shared to a third-part and if so, which data, how and why.
-    6. Security: Safety measurements to ensure the user's data is safe.
+    If you judge necessary, you can add more points to the summary, never more than 3 and remember to not repeat yourself.
 
     Once you finish all three summaries, you should choose between the three and return the one that is the most clear and easy to understand.
     You should return the analysis in a json format, with the following keys:
-    - Best summary = [string containing the best summary out of the three]
-    - Summary 1 = [string containing the first summary]
-    - Summary 2 = [string containing the second summary]
-    - Summary 3 = [string containing the third summary]
+    - 'Best summary' : '[string containing the best summary out of the three]'
 
     # Policy description:
     # {texto.descricao}"""
@@ -108,7 +104,22 @@ def analisar_politica(id):
     )
     if responseRaw.status_code == 200:
         resultados = responseRaw.json()
-        return resultados['choices'][0]['message']['content']    
+        content = resultados['choices'][0]['message']['content']
+
+        # Removendo os marcadores de código (```json e ```)
+        content = content.strip('```json\n').strip('```')
+
+        # Convertendo o JSON em um dicionário Python
+        content_dict = json.loads(content)
+        print(content_dict)
+        best_summary = content_dict['Best summary']
+
+        # Armazenando o resultado na sessão
+        session['resultados'] = best_summary
+        session['id'] = id
+        
+
+        return redirect(url_for('visualizar_politica', id=id))
     else:
         return "Nenhuma escolha encontrada na resposta."
             
