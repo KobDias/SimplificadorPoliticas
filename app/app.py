@@ -43,31 +43,18 @@ def criar_politica():
 
 @app.route('/visualizar_politica/<int:id>') # VISUALIZA POLITICA
 def visualizar_politica(id):
-    resultados = None
     resumo = None
     objetivo = None
-    if 'resultados' in session and session['id'] == id:
-        resultados = session['resultados']
+    if 'resumo' in session and session['id'] == id:
         resumo = session.get('resumo')
         objetivo = session.get('objetivo')
         id = session['id']
         # Limpe os dados da sessão após recuperá-los
-        session.pop('resultados', None)
         session.pop('resumo', None)
         session.pop('objetivo', None)
         session.pop('id', None)
     politica = Politica.query.get_or_404(id)
-    return render_template('visualizar_politica.html', politica=politica, resultados=resultados, resumo=resumo, objetivo=objetivo)  
-
-@app.route('/editar_politica/<int:id>', methods=['GET', 'POST']) # EDITA POLITICA
-def editar_politica(id):
-    politica = Politica.query.get_or_404(id)
-    if request.method == 'POST':
-        politica.titulo = request.form['titulo']
-        politica.descricao = request.form['descricao']
-        db.session.commit()
-        return redirect(url_for('home'))
-    return render_template('editar_politica.html', politica=politica)
+    return render_template('visualizar_politica.html', politica=politica, resumo=resumo, objetivo=objetivo)  
 
 @app.route('/deletar_politica/<int:id>') # DELETA POLITICA
 def deletar_politica(id):
@@ -81,13 +68,13 @@ def analisar_politica(id):
     texto = Politica.query.get_or_404(id)
 
     promptResumidor = f"""You are a legal expert, mainly focused on LGPD. You'll receive the description of a policy. 
-    Your task is to analyze and provide summaries of its main points, trying to better it each time, returning to 
+    Your task is to analyze and provide summaries of its main points, continuously improving the clarity, returning to 
     the user a text with the terms simplified though accurate so they can comprehend how their data is being used. 
     Consider you're speaking to brazilians and lay people that don't undertand the minimun about law, much less LGDP.
-    Upom specific words, you should provide their meaning between brackets, so the user can understand what it means.
+    When encountering technical terms, you should provide their meaning between brackets, so the user can understand what it means.
     Remember to not repeat yourself.
-    Your summary must be in portuguese, be clear and follow the structure:
-    1. Summary: A summary that contains the main points in a clear way. It should be smaller than the actual policy.
+    Your summary must be in portuguese, clear, informal but precise and follow the structure:
+    1. Summary: A summary that contains the main points in a clear way. Prioritize small sentences and easy words. Make analogies when possible.
     2. Objective: The main reason behind the politic.
     If you judge necessary, you can add more points to the summary, never more than 3 and remember to not repeat yourself.
 
@@ -143,8 +130,7 @@ def analisar_politica(id):
             print("\nObjetivo:")
             print(objetivo)
             
-                # Armazenando o resultado na sessão
-            session['resultados'] = True
+            # Armazenando o resultado na sessão
             session['resumo'] = resumo
             session['objetivo'] = objetivo
             session['id'] = texto.id
