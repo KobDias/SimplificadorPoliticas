@@ -1,5 +1,4 @@
-from flask import Flask, jsonify, request, session, url_for, redirect, render_template
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, request, session, url_for, redirect, render_template
 import requests
 from db import db
 from models import Politica
@@ -106,11 +105,10 @@ def analisar_politica(id):
             # Decodifique o JSON
             content_dict = json.loads(content)
         else:
-            print(content_dict)
             print("Erro: O conteúdo não é um JSON válido.")
 
-            session['resumo'] = "Erro: O conteúdo não é um JSON válido."
-            session['objetivo'] = "---"
+            session['resumo'] = "A politica pode ser muito curta ou o Mistral não conseguiu entender. Tente novamente."
+            session['objetivo'] = "Erro: O conteúdo não é um JSON válido."
             session['id'] = texto.id
 
             return redirect(url_for('visualizar_politica', id=id))
@@ -118,10 +116,9 @@ def analisar_politica(id):
         best_summary = content_dict.get('Best summary')
         if best_summary is None:
             session['resumo'] = "Erro: A chave 'Best summary' não foi encontrada."
-            session['objetivo'] = "---"
+            session['objetivo'] = "A politica pode ser muito curta ou o Mistral não conseguiu entender. Tente novamente."
             session['id'] = texto.id
 
-            print(best_summary)
             print("Erro: A chave 'Best summary' não foi encontrada.")
             return redirect(url_for('visualizar_politica', id=id))
 
@@ -137,9 +134,13 @@ def analisar_politica(id):
     
         return redirect(url_for('visualizar_politica', id=id))
     else:
-        session['resumo'] = "Erro: Não foi possível obter a resposta do Mistral."
-        session['objetivo'] = "---"
+        session['resumo'] = "A politica pode ser muito curta ou o Mistral não conseguiu entender. Tente novamente."
+        session['objetivo'] = "Erro: Não foi possível obter a resposta do Mistral. Tente novamente."
         session['id'] = texto.id
+
+        # Debug
+        print(f"Erro: {responseRaw.status_code} - {responseRaw.text}")
+
         return redirect(url_for('visualizar_politica', id=id))            
     
 if __name__ == '__main__':
