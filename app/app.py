@@ -107,11 +107,24 @@ def analisar_politica(id):
             content_dict = json.loads(content)
         else:
             print(content_dict)
-            return "Erro: O conteúdo não é um JSON válido."
+            print("Erro: O conteúdo não é um JSON válido.")
+
+            session['resumo'] = "Erro: O conteúdo não é um JSON válido."
+            session['objetivo'] = "---"
+            session['id'] = texto.id
+
+            return redirect(url_for('visualizar_politica', id=id))
 
         best_summary = content_dict.get('Best summary')
         if best_summary is None:
-            return "Erro: A chave 'Best summary' não foi encontrada."
+            session['resumo'] = "Erro: A chave 'Best summary' não foi encontrada."
+            session['objetivo'] = "---"
+            session['id'] = texto.id
+
+            print(best_summary)
+            print("Erro: A chave 'Best summary' não foi encontrada.")
+            return redirect(url_for('visualizar_politica', id=id))
+
         else:
             # Acesse os valores dentro de 'Best summary'
             resumo = best_summary.get('1. Summary', '1. Resumo')
@@ -124,23 +137,12 @@ def analisar_politica(id):
     
         return redirect(url_for('visualizar_politica', id=id))
     else:
-        return "Nenhuma escolha encontrada na resposta."
-            
+        session['resumo'] = "Erro: Não foi possível obter a resposta do Mistral."
+        session['objetivo'] = "---"
+        session['id'] = texto.id
+        return redirect(url_for('visualizar_politica', id=id))            
+    
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-
-        politicas = [
-            {'id': 1, 'titulo': 'Politica 1', 'descricao': 'Descricao 1'},
-            {'id': 2, 'titulo': 'Politica 2', 'descricao': 'Descricao 2'},
-            {'id': 3, 'titulo': 'Politica 3', 'descricao': 'Descricao 3'},
-            {'id': 4, 'titulo': 'Politica 4', 'descricao': 'Descricao 4'},
-            {'id': 5, 'titulo': 'Politica 5', 'descricao': 'Descricao 5'}
-        ]
-        for p in politicas:
-            nova_politica = Politica.query.filter_by(titulo=p['titulo']).first()
-            if not nova_politica:
-                nova_politica = Politica(**p)
-                db.session.add(nova_politica)
-        db.session.commit()
     app.run(debug=True)
