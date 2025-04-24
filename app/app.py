@@ -27,7 +27,6 @@ def home():
 @app.route('/criar_politica', methods=['GET', 'POST']) # CRIA POLITICA
 def criar_politica():
     if request.method == 'POST':
-
         titulo = request.form['titulo']
         descricao = request.form['descricao']
 
@@ -35,16 +34,21 @@ def criar_politica():
         db.session.add(nova_politica)
         db.session.commit()
         return redirect(url_for('home'))
+    # GET
     return render_template('criar_politica.html')
 
 @app.route('/visualizar_politica/<int:id>') # VISUALIZA POLITICA
 def visualizar_politica(id):
+    # Limpando os dados
     resumo = None
     objetivo = None
+
+    # Verifica se há dados na sessão
     if 'resumo' in session and session['id'] == id:
         resumo = session.get('resumo')
         objetivo = session.get('objetivo')
         id = session['id']
+
         # Limpe os dados da sessão após recuperá-los
         session.pop('resumo', None)
         session.pop('objetivo', None)
@@ -61,87 +65,108 @@ def deletar_politica(id):
 
 @app.route('/analisar_politica/<int:id>')
 def analisar_politica(id):
-    texto = Politica.query.get_or_404(id)
+    if api_mistra is None:
+        print("Erro: A chave da API do Mistral não está definida.")
+        session['resumo'] = "Crie um arquivo .env na raiz do projeto e adicione a chave da api do Mistr"
+        session['objetivo'] = "Erro: A chave da API do Mistral não está definida."
+        session['id'] = id
 
-    promptResumidor = f"""You are a legal expert, mainly focused on LGPD. You'll receive the description of a policy. 
-    Your task is to analyze and provide summaries of its main points, continuously improving the clarity, returning to 
-    the user a text with the terms simplified though accurate so they can comprehend how their data is being used. 
-    Consider you're speaking to brazilians and lay people that don't undertand the minimun about law, much less LGDP.
-    When encountering technical terms, you should provide their meaning between parentheses, so the user can understand what it means.
-    Remember to not repeat yourself.
-    Your summary must be in portuguese, clear, informal but precise and follow the structure:
-    1. Summary: A summary that contains the main points in a clear way. Prioritize small sentences and easy words. Make analogies when possible.
-    2. Objective: The main reason behind the politic.
-    If you judge necessary, you can add more points to the summary, never more than 3 and remember to not repeat yourself.
-
-    Once you finish all three summaries, you should choose between the three and return the one that is the most clear and easy to understand.
-    You should return the analysis in a json format, with the following keys:
-    - 'Best summary' : 
-        - '1. Summary': 'the summary you choose as the best one'
-        - '2. Objective': 'the objective you choose as the best one'
-
-    # Policy description:
-    # {texto.descricao}"""
-
-    responseRaw = requests.post(
-        'https://api.mistral.ai/v1/chat/completions',
-        json={
-            "model": "mistral-large-latest",
-            "temperature": 0.7,
-            "messages": [
-                {"role": "system", "content": promptResumidor},
-                {"role": "user", "content": texto.descricao}
-            ],
-        },
-        headers={
-            'Authorization': f'Bearer {api_mistra}'
-            }
-    )
-    if responseRaw.status_code == 200:
-        resultados = responseRaw.json()
-        contenta = resultados['choices'][0]['message']['content']
-        content = contenta.strip('```json\n').strip('```')
-        if content and content.startswith('{') and content.endswith('}'):
-            # Decodifique o JSON
-            content_dict = json.loads(content)
-        else:
-            print("Erro: O conteúdo não é um JSON válido.")
-
-            session['resumo'] = "A politica pode ser muito curta ou o Mistral não conseguiu entender. Tente novamente."
-            session['objetivo'] = "Erro: O conteúdo não é um JSON válido."
-            session['id'] = texto.id
-
-            return redirect(url_for('visualizar_politica', id=id))
-
-        best_summary = content_dict.get('Best summary')
-        if best_summary is None:
-            session['resumo'] = "Erro: A chave 'Best summary' não foi encontrada."
-            session['objetivo'] = "A politica pode ser muito curta ou o Mistral não conseguiu entender. Tente novamente."
-            session['id'] = texto.id
-
-            print("Erro: A chave 'Best summary' não foi encontrada.")
-            return redirect(url_for('visualizar_politica', id=id))
-
-        else:
-            # Acesse os valores dentro de 'Best summary'
-            resumo = best_summary.get('1. Summary', '1. Resumo')
-            objetivo = best_summary.get('2. Objective', '2. Objetivo')
-            
-            # Armazenando o resultado na sessão
-            session['resumo'] = resumo
-            session['objetivo'] = objetivo
-            session['id'] = texto.id
-    
         return redirect(url_for('visualizar_politica', id=id))
     else:
-        session['resumo'] = "A politica pode ser muito curta ou o Mistral não conseguiu entender. Tente novamente."
-        session['objetivo'] = "Erro: Não foi possível obter a resposta do Mistral. Tente novamente."
-        session['id'] = texto.id
+        texto = Politica.query.get_or_404(id) # receber a descrição da política pelo id
 
-        # Debug
-        print(f"Erro: {responseRaw.status_code} - {responseRaw.text}")
+        # definindo o prompt para o Mistral
+        promptResumidor = f"""
+        You are a legal expert specialized in LGPD (Brazilian General Data Protection Law). You will receive the description of a data policy. 
 
-        return redirect(url_for('visualizar_politica', id=id))            
+        Your task is to:
+        - Analyze the policy and provide a simplified summary in Brazilian Portuguese, using informal and clear language.
+        - Explain any legal or technical terms by placing their meaning in parentheses, right after the term.
+        - Avoid repeating information or stating the obvious.
+        - Always return the result as a valid JSON object, using the structure below:
+
+        {{
+        "Best summary": {{
+            "1. Summary": "Your simplified summary here, in Portuguese.",
+            "2. Objective": "The main purpose of the policy, in Portuguese."
+        }}
+        }}
+
+        If the policy text is too short or does not contain enough information to summarize, return this exact JSON:
+
+        {{
+        "Best summary": {{
+            "1. Summary": "Não há informação suficiente no texto para uma análise.",
+            "2. Objective": "O texto é muito curto para ser resumido."
+        }}
+        }}
+
+        # Policy description:
+        \"\"\"{texto.descricao}\"\"\"
+        """
+
+
+        responseRaw = requests.post(
+            'https://api.mistral.ai/v1/chat/completions',
+            json={
+                "model": "mistral-large-latest",
+                "temperature": 0.7,
+                "messages": [
+                    {"role": "system", "content": promptResumidor},
+                    {"role": "user", "content": texto.descricao}
+                ],
+            },
+            headers={
+                'Authorization': f'Bearer {api_mistra}'
+                }
+        )
+        if responseRaw.status_code == 200: # se requisição for bem sucedida
+            resultados = responseRaw.json()
+            contenta = resultados['choices'][0]['message']['content']
+            content = contenta.strip('```json\n').strip('```') # limpa a estrutura do json
+            if content and content.startswith('{') and content.endswith('}'): # se json valido
+                content_dict = json.loads(content) # converte o json para dicionario
+            else:
+                # debug
+                print("Erro: O conteúdo não é um JSON válido.")
+                print(f"Conteúdo: {content}")
+
+                # armazenando resultado
+                session['resumo'] = "A politica pode ser muito curta ou o Mistral não conseguiu entender. Tente novamente."
+                session['objetivo'] = "Erro: O conteúdo não é um JSON válido."
+                session['id'] = texto.id
+
+                return redirect(url_for('visualizar_politica', id=id))
+
+            best_summary = content_dict.get('Best summary') # acessa o dicionario dentro do json
+
+            if best_summary is None: # se não encontrar a chave 'Best summary'
+                session['resumo'] = "Erro: A chave 'Best summary' não foi encontrada."
+                session['objetivo'] = "A politica pode ser muito curta ou o Mistral não conseguiu entender. Tente novamente."
+                session['id'] = texto.id
+
+                print("Erro: A chave 'Best summary' não foi encontrada.")
+                return redirect(url_for('visualizar_politica', id=id))
+            else:
+                # acessa os valores dentro de 'Best summary'
+                resumo = best_summary.get('1. Summary', '1. Resumo')
+                objetivo = best_summary.get('2. Objective', '2. Objetivo')
+                
+                # armazenando resultado
+                session['resumo'] = resumo
+                session['objetivo'] = objetivo
+                session['id'] = texto.id
+        
+            return redirect(url_for('visualizar_politica', id=id))
+        else: # requisição falhou
+            session['resumo'] = "A politica pode ser muito curta ou o Mistral não conseguiu entender. Tente novamente."
+            session['objetivo'] = "Erro: Não foi possível obter a resposta do Mistral. Tente novamente."
+            session['id'] = texto.id
+
+            # Debug
+            print(f"Erro: {responseRaw.status_code} - {responseRaw.text}")
+
+            return redirect(url_for('visualizar_politica', id=id))            
     
 if __name__ == '__main__':
     with app.app_context():
