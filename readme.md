@@ -55,14 +55,10 @@ Crie um arquivo .env na raiz do projeto e configure a chave da sua api do mistra
 MISTRAL_API_KEY=sua_chave_aqui
 ```
 
-### 6. Acessar app
+### 6. Rodar!
+
+Por fim, rode a aplicação pelo app.py ou:
 ```bash
 cd app/
-```
-
-### 7. Rodar!
-
-Por fim, rode a aplicação pelo app.py
-```bash
 flask run
 ```
